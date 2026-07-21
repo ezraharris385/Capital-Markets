@@ -1,7 +1,6 @@
 import type {
   AppData, Deal, Comp, Market, Firm, RateMetric, CostComponent, InflationIndex, SeriesPoint, Project,
 } from "./types";
-import { underwrite, UWInputs } from "../lib/underwriting";
 
 // --- deterministic monthly series helper (ends at the anchor month) ---
 const ANCHOR = { y: 2026, m: 7 }; // Jul 2026
@@ -131,52 +130,13 @@ const inflation: InflationIndex[] = [
 ];
 
 // ============================== PROJECTS (Underwriting Reports) =============
-// Seeded from publicly-announced developments, underwritten via the engine so
-// the reported outputs are internally consistent. Replace with your own engine's
-// XLSX exports in the Underwriting Reports section.
-function mkProject(
-  ref: string, name: string, market: string, assetType: Project["assetType"],
-  status: Project["status"], updated: string, inp: UWInputs, notes: string
-): Project {
-  const o = underwrite(inp);
-  return {
-    id: "prj_" + ref.toLowerCase(), ref, name, market, assetType, status,
-    sizeMW: inp.sizeMW, updated, source: "public", notes,
-    totalCost: o.totalCost, stabilizedNOI: o.stabilizedNOI, yieldOnCost: o.yieldOnCost,
-    stabilizedValue: o.stabilizedValue, developmentProfit: o.developmentProfit,
-    developmentMargin: o.developmentMargin, developmentSpreadBps: o.developmentSpreadBps,
-    equity: o.equity, loan: o.loanAmount, dscr: o.dscr, debtYield: o.debtYield,
-    leveredIRR: o.leveredIRR ?? 0, unleveredIRR: o.unleveredIRR ?? 0,
-    equityMultiple: o.equityMultiple, cashFlows: o.cashFlows,
-    devCostPerMW: inp.devCostPerMW, leaseRateKwMonth: inp.leaseRateKwMonth,
-    opexPctRevenue: inp.opexPctRevenue, rentEscalatorPct: inp.rentEscalatorPct,
-    stabilizedCapRate: inp.stabilizedCapRate, exitCapRate: inp.exitCapRate,
-    holdYears: inp.holdYears, ltcPct: inp.ltcPct, interestRatePct: inp.interestRatePct,
-  };
-}
-
-const base = { opexPctRevenue: 6, rentEscalatorPct: 2.5, stabilizationMonths: 18, saleCostPct: 1 };
-const projects: Project[] = [
-  mkProject("NOVA-A1", "Ashburn Hyperscale — Phase I", "Northern Virginia", "Hyperscale", "In Development", "2026-07-08",
-    { sizeMW: 96, devCostPerMW: 10850000, leaseRateKwMonth: 95, stabilizedCapRate: 6.0, exitCapRate: 6.25, holdYears: 7, ltcPct: 55, interestRatePct: 6.3, ...base },
-    "Flagship NoVA development; power-constrained submarket supports premium net rent."),
-  mkProject("ATL-DC2", "Douglas County Build-to-Suit", "Atlanta", "Hyperscale", "Approved", "2026-07-11",
-    { sizeMW: 144, devCostPerMW: 10200000, leaseRateKwMonth: 78, stabilizedCapRate: 6.75, exitCapRate: 7.0, holdYears: 8, ltcPct: 55, interestRatePct: 6.4, ...base },
-    "15-yr BTS lease to hyperscaler; energization Q4 2027."),
-  mkProject("PHX-L3", "Phoenix Powered Land Development", "Phoenix", "Powered Shell", "Underwriting", "2026-07-15",
-    { sizeMW: 60, devCostPerMW: 9600000, leaseRateKwMonth: 80, stabilizedCapRate: 6.9, exitCapRate: 7.1, holdYears: 6, ltcPct: 50, interestRatePct: 6.5, ...base },
-    "SRP power commitment secured; phased 180MW campus, Phase 1 = 60MW."),
-  mkProject("CMH-JV", "Columbus Speculative JV", "Columbus", "Hyperscale", "Underwriting", "2026-07-02",
-    { sizeMW: 120, devCostPerMW: 9900000, leaseRateKwMonth: 74, stabilizedCapRate: 7.0, exitCapRate: 7.25, holdYears: 7, ltcPct: 50, interestRatePct: 6.6, ...base },
-    "AI-demand thesis; land + power secured, speculative lease-up risk."),
-  mkProject("CWA-HY", "Central WA Hydro Campus", "Central Washington", "Hyperscale", "On Hold", "2026-06-20",
-    { sizeMW: 250, devCostPerMW: 9200000, leaseRateKwMonth: 66, stabilizedCapRate: 7.25, exitCapRate: 7.5, holdYears: 8, ltcPct: 45, interestRatePct: 6.6, ...base },
-    "Ultra-low-cost hydro power ($0.045/kWh); sustainability-led mandate, awaiting anchor tenant."),
-];
+// Empty by design. Your underwriting projects come from your engine's .xlsx
+// exports — the dashboard starts at zero for project data until you upload.
+const projects: Project[] = [];
 
 export function makeSeedData(): AppData {
   return {
     deals, comps, markets, firms, rates, costs, inflation, projects,
-    meta: { lastRefresh: null, version: 2 },
+    meta: { lastRefresh: null, version: 3 },
   };
 }

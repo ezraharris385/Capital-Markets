@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useCall
 import type { AppData } from "../data/types";
 import { makeSeedData } from "../data/seed";
 
-const DATA_KEY = "meridian.data.v2";
+const DATA_KEY = "meridian.data.v3";
 const SETTINGS_KEY = "meridian.settings.v1";
 
 export interface Settings {

@@ -57,6 +57,7 @@ export const Projects: React.FC = () => {
   return (
     <div className="col" style={{ gap: 16 }}>
       {/* Portfolio rollup */}
+      {P.length > 0 && (
       <div className="grid g-6">
         <div className="card stat" style={{ background: "linear-gradient(160deg, var(--brand-deep-2), var(--surface-card) 72%)" }}>
           <div className="stat-label" style={{ color: "#bfe3d3" }}>Portfolio value</div>
@@ -73,6 +74,7 @@ export const Projects: React.FC = () => {
         <StatTile label="Portfolio IRR" value={fmtPct(roll.irr, 1)} sub="equity-weighted, levered" />
         <StatTile label="Equity at work" value={fmtUSD(roll.equity, { compact: true })} sub="across projects" />
       </div>
+      )}
 
       {/* Controls */}
       <div className="row" style={{ flexWrap: "wrap", gap: 10 }}>
@@ -88,7 +90,19 @@ export const Projects: React.FC = () => {
 
       {/* Project cards */}
       {shown.length === 0 ? (
-        <Card><div className="empty"><Icon name="underwrite" size={34} /><div>No projects yet. Upload an underwriting workbook to build per-project reports.</div></div></Card>
+        <Card>
+          <div className="empty" style={{ padding: "52px 20px" }}>
+            <Icon name="underwrite" size={34} />
+            <div style={{ fontWeight: 600, color: "var(--text-secondary)", marginTop: 6 }}>No projects yet — starts at zero</div>
+            <div style={{ fontSize: 12.5, marginTop: 4, maxWidth: 460, marginInline: "auto", lineHeight: 1.6 }}>
+              Download the template, paste in your underwriting engine's outputs (or just the inputs and the built-in engine will compute them), then upload. Each project becomes a report card that rolls into the Overview.
+            </div>
+            <div className="row" style={{ justifyContent: "center", gap: 10, marginTop: 16 }}>
+              <button className="btn btn-sm" onClick={() => downloadTemplate(PROJECT_HEADERS, PROJECT_EXAMPLE, "meridian-underwriting-template.xlsx")}><Icon name="download" size={15} /> Template</button>
+              <button className="btn btn-primary btn-sm" onClick={() => fileRef.current?.click()}><Icon name="upload" size={15} /> Upload underwriting</button>
+            </div>
+          </div>
+        </Card>
       ) : (
         <div className="grid g-3">
           {shown.map((p) => (
