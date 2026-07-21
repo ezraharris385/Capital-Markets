@@ -1,40 +1,34 @@
 import React, { useMemo } from "react";
 import { useStore } from "../lib/store";
-import { Card, StatTile, Delta, stageBadge } from "../components/ui";
-import { LineChart, RankBars, Donut, SERIES, Legend, ColumnChart } from "../components/charts";
-import { fmtUSD, fmtPct, fmtMW, compactNum } from "../lib/format";
-import { Icon } from "../components/Icon";
+import { Card, StatTile, Delta } from "../components/ui";
+import { LineChart, RankBars, Donut, SERIES, Legend } from "../components/charts";
+import { fmtUSD, fmtPct, fmtMW, gainColor } from "../lib/format";
 
 export const Overview: React.FC = () => {
   const { data } = useStore();
   const d = data;
 
-  const m = useMemo(() => {
-    const pipeline = d.deals.filter((x) => x.stage !== "Closed" && x.stage !== "Lost");
-    const totalPipe = pipeline.reduce((a, x) => a + x.value, 0);
-    const wtdPipe = pipeline.reduce((a, x) => a + x.value * x.probability / 100, 0);
-    const closed = d.deals.filter((x) => x.stage === "Closed");
-    const closedVal = closed.reduce((a, x) => a + x.value, 0);
-    const feeYTD = d.deals.filter((x) => x.stage === "Closed").reduce((a, x) => a + x.commission, 0);
-    const openFee = pipeline.reduce((a, x) => a + x.commission * x.probability / 100, 0);
-    const caps = d.deals.filter((x) => x.capRate).map((x) => x.capRate!);
-    const avgCap = caps.reduce((a, b) => a + b, 0) / (caps.length || 1);
-    const totalMW = pipeline.reduce((a, x) => a + x.sizeMW, 0);
+  const roll = useMemo(() => {
+    const P = d.projects;
+    const cost = P.reduce((a, p) => a + p.totalCost, 0);
+    const value = P.reduce((a, p) => a + p.stabilizedValue, 0);
+    const profit = P.reduce((a, p) => a + p.developmentProfit, 0);
+    const equity = P.reduce((a, p) => a + p.equity, 0);
+    const mw = P.reduce((a, p) => a + p.sizeMW, 0);
+    const yoc = cost > 0 ? P.reduce((a, p) => a + p.yieldOnCost * p.totalCost, 0) / cost : 0;
+    const irr = equity > 0 ? P.reduce((a, p) => a + p.leveredIRR * p.equity, 0) / equity : 0;
 
-    const byStage: Record<string, number> = {};
-    pipeline.forEach((x) => (byStage[x.stage] = (byStage[x.stage] || 0) + x.value));
-    const stageOrder = ["Sourcing", "Underwriting", "LOI", "Under Contract"];
-    const stageData = stageOrder.filter((s) => byStage[s]).map((s, i) => ({ label: s, value: byStage[s], color: SERIES[i] }));
+    const byStatus: Record<string, number> = {};
+    P.forEach((p) => (byStatus[p.status] = (byStatus[p.status] || 0) + p.stabilizedValue));
+    const statusData = Object.entries(byStatus).map(([k, v], i) => ({ label: k, value: v, color: SERIES[i % SERIES.length] }));
 
-    const byMarket: Record<string, number> = {};
-    pipeline.forEach((x) => (byMarket[x.market] = (byMarket[x.market] || 0) + x.value));
-    const marketBars = Object.entries(byMarket).map(([k, v]) => ({ label: k, value: v })).sort((a, b) => b.value - a.value).slice(0, 6);
+    const profitBars = [...P].sort((a, b) => b.developmentProfit - a.developmentProfit).slice(0, 6)
+      .map((p) => ({ label: p.name, value: p.developmentProfit, color: gainColor(p.developmentProfit), sub: "dev profit" }));
 
     const absBars = [...d.markets].sort((a, b) => b.absorptionMW - a.absorptionMW).slice(0, 6)
       .map((x) => ({ label: x.name, value: x.absorptionMW, sub: "12mo absorption" }));
 
-    const costTotal = d.costs.reduce((a, c) => a + c.costPerMW, 0);
-    return { pipeline, totalPipe, wtdPipe, closed, closedVal, feeYTD, openFee, avgCap, totalMW, stageData, marketBars, absBars, costTotal };
+    return { cost, value, profit, equity, mw, yoc, irr, statusData, profitBars, absBars, count: P.length };
   }, [d]);
 
   const ust10 = d.rates.find((r) => r.key === "ust10")!;
@@ -42,23 +36,27 @@ export const Overview: React.FC = () => {
   const devSpread = d.rates.find((r) => r.key === "spread_dev")!;
   const capStab = d.rates.find((r) => r.key === "cap_stab")!;
 
-  const recent = [...d.deals].sort((a, b) => +new Date(b.closeDate) - +new Date(a.closeDate)).slice(0, 6);
+  const dealFlow = [...d.deals].sort((a, b) => +new Date(b.closeDate) - +new Date(a.closeDate)).slice(0, 6);
 
   return (
     <div className="col" style={{ gap: 16 }}>
-      {/* Hero row */}
+      {/* Hero row — underwriting portfolio */}
       <div className="grid g-4">
-        <div className="card stat" style={{ gridColumn: "span 1", background: "linear-gradient(160deg, var(--brand-deep-2), var(--surface-card) 70%)" }}>
-          <div className="stat-label" style={{ color: "#bfe3d3" }}>Total pipeline value</div>
-          <div className="hero-num" style={{ fontSize: 38 }}>{fmtUSD(m.totalPipe, { compact: true })}</div>
+        <div className="card stat" style={{ background: "linear-gradient(160deg, var(--brand-deep-2), var(--surface-card) 70%)" }}>
+          <div className="stat-label" style={{ color: "#bfe3d3" }}>Underwriting portfolio value</div>
+          <div className="hero-num" style={{ fontSize: 36 }}>{fmtUSD(roll.value, { compact: true })}</div>
           <div className="stat-row">
-            <span className="chip" style={{ background: "rgba(23,232,143,0.14)", color: "var(--accent)", border: "none" }}>{m.pipeline.length} active deals</span>
-            <span className="stat-sub">{fmtMW(m.totalMW)}</span>
+            <span className="chip" style={{ background: "rgba(23,232,143,0.14)", color: "var(--accent)", border: "none" }}>{roll.count} projects</span>
+            <span className="stat-sub">{fmtMW(roll.mw)}</span>
           </div>
         </div>
-        <StatTile label="Probability-weighted" value={fmtUSD(m.wtdPipe, { compact: true })} sub="expected value" spark={ust10.history.map((h) => h.v)} sparkColor="var(--accent)" delta="+8.4%" deltaGood />
-        <StatTile label="Closed YTD" value={fmtUSD(m.closedVal, { compact: true })} sub={`${m.closed.length} transactions`} delta="+2 deals" deltaGood />
-        <StatTile label="Est. fees (closed + weighted)" value={fmtUSD(m.feeYTD + m.openFee, { compact: true })} sub={`${fmtUSD(m.feeYTD, { compact: true })} realized`} delta="+11%" deltaGood />
+        <div className="card stat">
+          <div className="stat-label">Value created</div>
+          <div className="stat-value" style={{ color: gainColor(roll.profit) }}>{fmtUSD(roll.profit, { compact: true })}</div>
+          <div className="stat-row"><span className="stat-delta up" style={{ fontSize: 12 }}>▲ {fmtPct(roll.profit / (roll.cost || 1) * 100, 0)} margin</span><span className="stat-sub">development profit</span></div>
+        </div>
+        <StatTile label="Total development cost" value={fmtUSD(roll.cost, { compact: true })} sub={`avg YoC ${fmtPct(roll.yoc, 2)}`} />
+        <StatTile label="Portfolio levered IRR" value={fmtPct(roll.irr, 1)} sub="equity-weighted" delta="+" deltaGood />
       </div>
 
       {/* Market pulse strip */}
@@ -69,11 +67,9 @@ export const Overview: React.FC = () => {
             { r: capStab, goodUp: false }, { r: devSpread, goodUp: true },
           ].map(({ r, goodUp }) => (
             <div key={r.key} className="col" style={{ gap: 2 }}>
-              <div className="row" style={{ justifyContent: "space-between" }}>
-                <span className="muted" style={{ fontSize: 12 }}>{r.label}</span>
-              </div>
+              <span className="muted" style={{ fontSize: 12 }}>{r.label}</span>
               <div className="row" style={{ alignItems: "baseline", gap: 8 }}>
-                <span style={{ fontSize: 22, fontWeight: 700 }}>{r.value}{r.unit === "%" ? "%" : r.unit === "bps" ? "" : ""}<span style={{ fontSize: 12, color: "var(--text-muted)" }}>{r.unit === "bps" ? " bps" : ""}</span></span>
+                <span style={{ fontSize: 22, fontWeight: 700 }}>{r.value}{r.unit === "%" ? "%" : ""}<span style={{ fontSize: 12, color: "var(--text-muted)" }}>{r.unit === "bps" ? " bps" : ""}</span></span>
                 <Delta v={r.changeBps} bps goodUp={goodUp} />
               </div>
             </div>
@@ -81,10 +77,10 @@ export const Overview: React.FC = () => {
         </div>
       </Card>
 
-      {/* Pipeline composition + rates */}
+      {/* Portfolio composition + rates */}
       <div className="grid" style={{ gridTemplateColumns: "1.15fr 1fr" }}>
-        <Card title="Pipeline by stage" sub="Active pursuits weighted toward close">
-          <Donut data={m.stageData} centerValue={fmtUSD(m.totalPipe, { compact: true })} centerLabel="in pursuit" />
+        <Card title="Portfolio by status" sub="Underwritten value by project phase">
+          <Donut data={roll.statusData} centerValue={fmtUSD(roll.value, { compact: true })} centerLabel="value" />
         </Card>
         <Card title="Rate & spread trend" sub="18-month history — 10Y UST vs SOFR">
           <LineChart labels={ust10.history.map((h, i) => (i % 3 === 0 ? mo(h.t) : ""))} area
@@ -96,30 +92,30 @@ export const Overview: React.FC = () => {
         </Card>
       </div>
 
-      {/* Pipeline by market + absorption */}
+      {/* Top projects + absorption */}
       <div className="grid g-2">
-        <Card title="Pipeline value by market" sub="Where your book is concentrated">
-          <RankBars items={m.marketBars} valueFmt={(v) => fmtUSD(v, { compact: true })} color="var(--s1)" />
+        <Card title="Top projects by value created" sub="Development profit ($)">
+          <RankBars items={roll.profitBars} valueFmt={(v) => fmtUSD(v, { compact: true })} />
         </Card>
         <Card title="Hottest markets" sub="Trailing 12-month net absorption (MW)">
-          <RankBars items={m.absBars} valueFmt={(v) => v.toFixed(0) + " MW"} color="var(--s3)" />
+          <RankBars items={roll.absBars} valueFmt={(v) => v.toFixed(0) + " MW"} color="var(--s3)" />
         </Card>
       </div>
 
-      {/* Recent activity */}
-      <Card title="Recent & upcoming activity" sub="Latest closings and near-term milestones" pad={false}>
+      {/* Public deal flow */}
+      <Card title="Market deal flow" sub="Recent publicly-announced transactions" pad={false}>
         <div className="table-wrap">
           <table className="dt">
-            <thead><tr><th>Deal</th><th>Market</th><th>Type</th><th>Stage</th><th className="num">Value</th><th className="num">Size</th><th className="num">Close</th></tr></thead>
+            <thead><tr><th>Transaction</th><th>Market</th><th>Type</th><th className="num">Value</th><th className="num">Size</th><th className="num">Cap</th><th className="num">Date</th></tr></thead>
             <tbody>
-              {recent.map((x) => (
+              {dealFlow.map((x) => (
                 <tr key={x.id}>
                   <td className="t-strong">{x.name}</td>
                   <td className="t-mut">{x.market}</td>
                   <td><span className="chip">{x.dealType}</span></td>
-                  <td>{stageBadge(x.stage)}</td>
                   <td className="num t-strong">{x.value ? fmtUSD(x.value, { compact: true }) : "—"}</td>
                   <td className="num t-mut">{x.sizeMW ? x.sizeMW + " MW" : "—"}</td>
+                  <td className="num t-mut">{x.capRate ? x.capRate + "%" : "—"}</td>
                   <td className="num t-mut">{new Date(x.closeDate).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}</td>
                 </tr>
               ))}

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useCall
 import type { AppData } from "../data/types";
 import { makeSeedData } from "../data/seed";
 
-const DATA_KEY = "meridian.data.v1";
+const DATA_KEY = "meridian.data.v2";
 const SETTINGS_KEY = "meridian.settings.v1";
 
 export interface Settings {
@@ -43,7 +43,11 @@ function loadData(): AppData {
     const raw = localStorage.getItem(DATA_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as AppData;
-      if (parsed && parsed.deals && parsed.markets) return parsed;
+      if (parsed && parsed.deals && parsed.markets) {
+        // Defensive: ensure collections added in later versions always exist.
+        if (!parsed.projects) parsed.projects = [];
+        return parsed;
+      }
     }
   } catch { /* ignore */ }
   return makeSeedData();

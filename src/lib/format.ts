@@ -51,3 +51,9 @@ export function signed(n: number, decimals = 1): string {
 export function id(prefix = "id"): string {
   return prefix + "_" + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 }
+
+// Gains green, losses red. Positive → up (green), negative → down (red), zero → muted.
+export function gainColor(v: number | null | undefined): string {
+  if (v == null || isNaN(v as number) || v === 0) return "var(--text-secondary)";
+  return v > 0 ? "var(--up)" : "var(--down)";
+}

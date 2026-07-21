@@ -5,10 +5,12 @@ import { Icon } from "../components/Icon";
 import { importFile, exportRows, exportWorkbook, downloadTemplate } from "../lib/xlsx";
 import { id as genId, fmtDate } from "../lib/format";
 import type { AppData, Deal, Comp } from "../data/types";
+import { PROJECT_HEADERS, PROJECT_EXAMPLE, rowToProject, projectToRow, upsertProjects } from "../lib/projects";
 
-type Target = "deals" | "comps" | "markets" | "firms";
+type Target = "projects" | "deals" | "comps" | "markets" | "firms";
 
 const TEMPLATES: Record<Target, { headers: string[]; example: Record<string, any> }> = {
+  projects: { headers: PROJECT_HEADERS, example: PROJECT_EXAMPLE },
   deals: {
     headers: ["Name", "Market", "Type", "Asset", "Stage", "MW", "Value", "CapRate", "Probability", "Commission", "Client", "Counterparty", "Broker", "CloseDate", "Source", "Notes"],
     example: { Name: "Example — NoVA Powered Shell", Market: "Northern Virginia", Type: "Investment Sale", Asset: "Powered Shell", Stage: "LOI", MW: 48, Value: 360000000, CapRate: 6.2, Probability: 60, Commission: 2000000, Client: "Acme Capital", Counterparty: "Dev Co", Broker: "You", CloseDate: "2026-12-01", Source: "internal", Notes: "" },
@@ -37,7 +39,8 @@ export const DataHub: React.FC = () => {
   const [confirmReset, setConfirmReset] = useState(false);
 
   const counts = {
-    deals: data.deals.length, comps: data.comps.length, markets: data.markets.length, firms: data.firms.length,
+    projects: data.projects.length, deals: data.deals.length, comps: data.comps.length,
+    markets: data.markets.length, firms: data.firms.length,
     public: data.deals.filter((d) => d.source === "public").length + data.comps.filter((c) => c.source === "public").length,
     flagged: data.deals.filter((d) => d.flagged).length + data.comps.filter((c) => c.flagged).length,
   };
@@ -56,7 +59,8 @@ export const DataHub: React.FC = () => {
 
   const exportAll = () => {
     exportWorkbook([
-      { name: "Pipeline", rows: data.deals.map(dealFlat) },
+      { name: "Projects", rows: data.projects.map(projectToRow) },
+      { name: "DealFlow", rows: data.deals.map(dealFlat) },
       { name: "Comps", rows: data.comps.map(compFlat) },
       { name: "Markets", rows: data.markets as any },
       { name: "Firms", rows: data.firms.map((f) => ({ ...f, activeMarkets: f.activeMarkets.join("; ") })) },
@@ -67,23 +71,37 @@ export const DataHub: React.FC = () => {
     toast("Full workbook exported");
   };
 
+  // Editable "data pack": current data in the exact template layout, one sheet
+  // per dataset. Edit any sheet, re-upload it to the matching target to update.
+  const exportDataPack = () => {
+    exportWorkbook([
+      { name: "Projects", rows: data.projects.length ? data.projects.map(projectToRow) : [PROJECT_EXAMPLE] },
+      { name: "DealFlow", rows: data.deals.map(dealFlat) },
+      { name: "Comps", rows: data.comps.map(compFlat) },
+      { name: "Markets", rows: data.markets as any },
+      { name: "Firms", rows: data.firms.map((f) => ({ ...f, activeMarkets: f.activeMarkets.join("; ") })) },
+    ], "meridian-data-pack.xlsx");
+    toast("Editable data pack exported");
+  };
+
   return (
     <div className="col" style={{ gap: 16 }}>
       <div className="grid g-6">
-        <StatTile label="Deals" value={String(counts.deals)} />
+        <StatTile label="Projects" value={String(counts.projects)} />
+        <StatTile label="Deal flow" value={String(counts.deals)} />
         <StatTile label="Comps" value={String(counts.comps)} />
         <StatTile label="Markets" value={String(counts.markets)} />
         <StatTile label="Firms" value={String(counts.firms)} />
-        <StatTile label="Public-sourced" value={String(counts.public)} />
         <StatTile label="Flagged (redress)" value={String(counts.flagged)} />
       </div>
 
       <div className="grid g-2">
-        <Card title="Import from Excel" sub="Upload an .xlsx / .csv that matches a template. Rows are appended.">
+        <Card title="Import from Excel" sub="Upload a file that matches a template. Re-uploading updates existing rows in place.">
           <div className="col" style={{ gap: 14 }}>
             <label className="field">Target dataset
               <select className="select" value={target} onChange={(e) => setTarget(e.target.value as Target)}>
-                <option value="deals">Deals / Pipeline</option>
+                <option value="projects">Underwriting projects</option>
+                <option value="deals">Deal flow / CRM</option>
                 <option value="comps">Comparables</option>
                 <option value="markets">Markets</option>
                 <option value="firms">Firms</option>
@@ -96,18 +114,20 @@ export const DataHub: React.FC = () => {
             </div>
             <div className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>
               <Icon name="info" size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />
-              Tip: download the template first, fill it in Excel, then upload. Column headers must match the template. Numbers can include $ , % — they're cleaned automatically.
+              These are the standard files that keep the dashboard updated. Edit one in Excel and re-upload — rows are matched by their key ({target === "projects" ? "Ref" : target === "deals" ? "Name" : "Name"}) and <strong>updated in place</strong>, new rows added. Numbers can include $ , % — they're cleaned automatically. Underwriting projects with blank output columns are computed by the built-in engine.
             </div>
           </div>
         </Card>
 
-        <Card title="Export" sub="Everything is yours — export any dataset or the full workbook.">
+        <Card title="Export & standard files" sub="Your editable data pack keeps everything in sync — export, edit, re-upload.">
           <div className="wrap" style={{ gap: 10 }}>
-            <button className="btn" onClick={() => exportRows(data.deals.map(dealFlat), "meridian-pipeline.xlsx", "Pipeline")}><Icon name="download" size={15} /> Pipeline</button>
+            <button className="btn btn-primary" onClick={exportDataPack}><Icon name="layers" size={15} /> Editable data pack</button>
+            <button className="btn" onClick={() => exportRows(data.projects.map(projectToRow), "meridian-projects.xlsx", "Projects")}><Icon name="download" size={15} /> Projects</button>
+            <button className="btn" onClick={() => exportRows(data.deals.map(dealFlat), "meridian-dealflow.xlsx", "DealFlow")}><Icon name="download" size={15} /> Deal flow</button>
             <button className="btn" onClick={() => exportRows(data.comps.map(compFlat), "meridian-comps.xlsx", "Comps")}><Icon name="download" size={15} /> Comps</button>
             <button className="btn" onClick={() => exportRows(data.markets as any, "meridian-markets.xlsx", "Markets")}><Icon name="download" size={15} /> Markets</button>
             <button className="btn" onClick={() => exportRows(data.firms.map((f) => ({ ...f, activeMarkets: f.activeMarkets.join("; ") })) as any, "meridian-firms.xlsx", "Firms")}><Icon name="download" size={15} /> Firms</button>
-            <button className="btn btn-primary" onClick={exportAll}><Icon name="layers" size={15} /> Export all (workbook)</button>
+            <button className="btn" onClick={exportAll}><Icon name="download" size={15} /> Full snapshot</button>
           </div>
           <div className="hr" style={{ margin: "16px 0" }} />
           <div className="kv">
@@ -170,7 +190,23 @@ function RedressList() {
 }
 
 // ---- import mappers ----
+// Upsert by a case-insensitive key; matching rows update in place, new rows prepend.
+function upsertBy<T extends { id: string }>(existing: T[], incoming: T[], keyOf: (x: T) => string): T[] {
+  const out = [...existing];
+  for (const item of incoming) {
+    const k = keyOf(item).toLowerCase();
+    const idx = k ? out.findIndex((x) => keyOf(x).toLowerCase() === k) : -1;
+    if (idx >= 0) out[idx] = { ...item, id: out[idx].id };
+    else out.unshift(item);
+  }
+  return out;
+}
+
 function applyImport(d: AppData, target: Target, rows: Record<string, any>[]): AppData {
+  if (target === "projects") {
+    const mapped = rows.filter((r) => r.Name || r.Ref).map(rowToProject);
+    return { ...d, projects: upsertProjects(d.projects, mapped) };
+  }
   if (target === "deals") {
     const mapped: Deal[] = rows.map((r) => ({
       id: genId("d"), name: str(r.Name || r.name), market: str(r.Market), dealType: (str(r.Type) || "Investment Sale") as any,
@@ -179,7 +215,7 @@ function applyImport(d: AppData, target: Target, rows: Record<string, any>[]): A
       broker: str(r.Broker) || "You", client: str(r.Client), counterparty: str(r.Counterparty), commission: num(r.Commission),
       closeDate: str(r.CloseDate) || new Date().toISOString().slice(0, 10), source: (str(r.Source) || "internal") as any, notes: str(r.Notes),
     }));
-    return { ...d, deals: [...mapped, ...d.deals] };
+    return { ...d, deals: upsertBy(d.deals, mapped, (x) => x.name) };
   }
   if (target === "comps") {
     const mapped: Comp[] = rows.map((r) => ({
@@ -199,14 +235,14 @@ function applyImport(d: AppData, target: Target, rows: Record<string, any>[]): A
       rentYoYPct: num(r.RentYoYPct), landPerAcre: num(r.LandPerAcre), powerAvail: (str(r.PowerAvail) || "Moderate") as any,
       powerCostKwh: num(r.PowerCostKwh), preleasedPct: num(r.PreleasedPct),
     }));
-    return { ...d, markets: [...d.markets, ...mapped] };
+    return { ...d, markets: upsertBy(d.markets, mapped, (x) => x.name) };
   }
   const mapped = rows.map((r) => ({
     id: genId("f"), name: str(r.Firm || r.Name), type: (str(r.Type) || "Investor") as any, ticker: str(r.Ticker) || null,
     hqMarket: str(r.HQ), activeMarkets: str(r.Markets).split(/[;,]/).map((x) => x.trim()).filter(Boolean),
     activityScore: num(r.ActivityScore), dealsL12M: num(r.Deals12M), capitalDeployedB: num(r.CapitalB), note: str(r.Note), source: "public" as const,
   }));
-  return { ...d, firms: [...d.firms, ...mapped] };
+  return { ...d, firms: upsertBy(d.firms, mapped, (x) => x.name) };
 }
 const str = (v: any) => (v == null ? "" : String(v).trim());
 

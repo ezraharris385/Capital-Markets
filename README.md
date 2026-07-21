@@ -39,16 +39,31 @@ required beyond a free sign-in. (Or push to GitHub and enable GitHub Pages.)
 
 | Section | What it does |
 |---|---|
-| **Overview** | Executive snapshot — pipeline value, weighted pipeline, fees, market pulse (rates/caps), pipeline by stage & market, hottest markets. |
-| **Deal Pipeline** | Full deal database: add/edit/delete, stage summary, probability-weighting, fees, search + filter + sort, Excel export. |
-| **Comparables** | Sale & lease comps (public + internal), pricing analytics ($/kW, cap rate, $/kW/mo), and the **Redress** queue to verify public data. |
+| **Overview** | Executive reporting snapshot — underwriting portfolio value, value created, portfolio IRR, market pulse (rates/caps), portfolio by status, top projects, hottest markets, public deal flow. |
+| **Underwriting Reports** | Per-project reporting fed by your underwriting engine's XLSX. Summary card per project → click for the full breakdown (returns, value creation, debt, cash flows). Rolls up into the Overview. Reports the engine's outputs, or computes them from inputs if outputs are blank. |
+| **Deal Flow** | Publicly-announced market transactions plus your CRM-fed pursuits (upload the Deal Flow / CRM workbook). Searchable, filterable, sortable. |
+| **Comparables** | Publicly-sourced sale & lease comps, pricing analytics ($/kW, cap rate, $/kW/mo), and the **Redress** queue to verify public data before use. |
 | **Markets** | Supply composition (operational / under-construction / planned MW), lease rates, land pricing, and **power availability** — the binding constraint. |
 | **Firms & Activity** | Who's buying, building, leasing — hyperscalers, operators, REITs, investors, lenders — with activity scores and capital deployed. |
 | **Capital Markets** | Rates, spreads, cap rates, and the **development spread** (build-to-core margin) with 18-month history. |
 | **Costs & Inflation** | Development cost stack ($/MW by system) and an input-price inflation tracker (transformers, copper, gensets, labor, power). |
-| **Underwriting** | Deterministic development & investment model — YoC, dev margin, levered/unlevered IRR, equity multiple, DSCR, debt yield, cash-flow chart, and a sensitivity grid. |
+| **Underwriting Model** | Deterministic development & investment calculator — YoC, dev margin, levered/unlevered IRR, equity multiple, DSCR, debt yield, cash-flow chart, and a sensitivity grid. |
 | **AI Analyst** | Chat that reasons across **all** the live data. Works with an Anthropic key, or in a built-in local mode with no key. |
-| **Data & Sources** | Upload Excel, download templates, export any dataset or the full workbook, run the redress queue, reset data. |
+| **Data & Sources** | The **standard editable files** that keep the dashboard in sync — upload Excel (re-uploading *updates rows in place*), download the editable data pack or per-dataset templates, run the redress queue, reset data. |
+
+### The standard data files (edit → re-upload → updates in place)
+
+The dashboard is driven by a fixed set of workbooks. Download the **editable data
+pack** (Data & Sources → Export), edit any sheet in Excel, and re-upload it to the
+matching target — rows are matched by key (`Ref` for projects, `Name` elsewhere)
+and **updated in place**; new rows are added. This is how your separate
+underwriting engine and CRM feed in: export their results to the **Projects** and
+**Deal Flow / CRM** templates and drop them in.
+
+- **Projects** — one row per project underwriting (from your engine). Leave the
+  output columns blank to let the built-in engine compute them from the inputs.
+- **Deal Flow / CRM** — your live pursuits (private) alongside public deal flow.
+- **Comps · Markets · Firms** — publicly-sourced market intelligence.
 
 ---
 

@@ -12,6 +12,7 @@ import { Firms } from "./modules/Firms";
 import { CapitalMarkets } from "./modules/CapitalMarkets";
 import { Costs } from "./modules/Costs";
 import { Underwriting } from "./modules/Underwriting";
+import { Projects } from "./modules/Projects";
 import { Analyst } from "./modules/Analyst";
 import { DataHub } from "./modules/DataHub";
 import { SettingsPage } from "./modules/SettingsPage";
@@ -19,14 +20,15 @@ import { SettingsPage } from "./modules/SettingsPage";
 interface NavDef { key: string; label: string; icon: string; title: string; desc: string; Comp: React.FC; group: string; }
 
 const NAV: NavDef[] = [
-  { key: "overview", label: "Overview", icon: "dashboard", title: "Executive Overview", desc: "Live snapshot across pipeline, markets, capital & costs", Comp: Overview, group: "Command" },
-  { key: "pipeline", label: "Deal Pipeline", icon: "pipeline", title: "Deal Pipeline & Flow", desc: "Every live pursuit — sortable, filterable, weighted", Comp: Pipeline, group: "Deals" },
-  { key: "comps", label: "Comparables", icon: "comps", title: "Sale & Lease Comps", desc: "Public and internal transaction evidence", Comp: Comps, group: "Deals" },
+  { key: "overview", label: "Overview", icon: "dashboard", title: "Executive Overview", desc: "Live reporting across projects, markets, capital & costs", Comp: Overview, group: "Command" },
+  { key: "projects", label: "Underwriting Reports", icon: "underwrite", title: "Underwriting Reports", desc: "Per-project underwriting from your engine — summarized and rolled up", Comp: Projects, group: "Command" },
+  { key: "pipeline", label: "Deal Flow", icon: "pipeline", title: "Deal Flow", desc: "Public market transactions and your CRM-fed pursuits", Comp: Pipeline, group: "Deals" },
+  { key: "comps", label: "Comparables", icon: "comps", title: "Sale & Lease Comps", desc: "Publicly-sourced transaction evidence", Comp: Comps, group: "Deals" },
   { key: "markets", label: "Markets", icon: "markets", title: "Market Fundamentals", desc: "Supply, demand, power & pricing by metro", Comp: Markets, group: "Intelligence" },
   { key: "firms", label: "Firms & Activity", icon: "firms", title: "Firms & Activity", desc: "Who's buying, building and leasing", Comp: Firms, group: "Intelligence" },
   { key: "capital", label: "Capital Markets", icon: "capital", title: "Capital Markets", desc: "Rates, spreads, cap rates & debt/equity conditions", Comp: CapitalMarkets, group: "Intelligence" },
   { key: "costs", label: "Costs & Inflation", icon: "costs", title: "Costs & Inflation", desc: "Development cost stack and input-price tracker", Comp: Costs, group: "Intelligence" },
-  { key: "underwrite", label: "Underwriting", icon: "underwrite", title: "Underwriting Model", desc: "Deterministic development & investment model", Comp: Underwriting, group: "Tools" },
+  { key: "underwrite", label: "Underwriting Model", icon: "underwrite", title: "Underwriting Model", desc: "Deterministic development & investment calculator", Comp: Underwriting, group: "Tools" },
   { key: "analyst", label: "AI Analyst", icon: "ai", title: "AI Analyst", desc: "Ask questions across all your live data", Comp: Analyst, group: "Tools" },
   { key: "data", label: "Data & Sources", icon: "data", title: "Data & Sources", desc: "Upload, export, search and redress your records", Comp: DataHub, group: "Tools" },
 ];

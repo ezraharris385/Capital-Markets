@@ -123,6 +123,56 @@ export interface InflationIndex {
   category: "Headline" | "Construction" | "Equipment" | "Energy" | "Labor";
 }
 
+// ---------------------------------------------------------------------------
+// Underwriting Reports (Projects).
+// Each project is the OUTPUT of a separate underwriting engine, delivered as an
+// .xlsx. The app reports the numbers (and can recompute from inputs if the file
+// only carries inputs). Projects roll up into the portfolio dashboard.
+// ---------------------------------------------------------------------------
+export type ProjectStatus =
+  | "Underwriting" | "Approved" | "In Development" | "Stabilized" | "On Hold" | "Sold";
+
+export interface Project {
+  id: string;
+  ref: string;             // stable editable key (used for xlsx upsert)
+  name: string;
+  market: string;
+  assetType: AssetType;
+  status: ProjectStatus;
+  sizeMW: number;
+  updated: string;         // ISO date the underwriting was produced
+  source: Source;
+  notes: string;
+
+  // Underwriting outputs (reported by the engine, or computed from inputs)
+  totalCost: number;
+  stabilizedNOI: number;
+  yieldOnCost: number;     // %
+  stabilizedValue: number;
+  developmentProfit: number;
+  developmentMargin: number; // %
+  developmentSpreadBps: number;
+  equity: number;
+  loan: number;
+  dscr: number;
+  debtYield: number;       // %
+  leveredIRR: number;      // %
+  unleveredIRR: number;    // %
+  equityMultiple: number;
+  cashFlows: number[];     // levered equity cash flows incl. Y0
+
+  // Inputs (optional — present when computed from inputs / for transparency)
+  devCostPerMW?: number;
+  leaseRateKwMonth?: number;
+  opexPctRevenue?: number;
+  rentEscalatorPct?: number;
+  stabilizedCapRate?: number;
+  exitCapRate?: number;
+  holdYears?: number;
+  ltcPct?: number;
+  interestRatePct?: number;
+}
+
 export interface AppData {
   deals: Deal[];
   comps: Comp[];
@@ -131,5 +181,6 @@ export interface AppData {
   rates: RateMetric[];
   costs: CostComponent[];
   inflation: InflationIndex[];
+  projects: Project[];
   meta: { lastRefresh: string | null; version: number };
 }

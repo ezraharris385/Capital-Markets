@@ -1,6 +1,7 @@
 import type {
-  AppData, Deal, Comp, Market, Firm, RateMetric, CostComponent, InflationIndex, SeriesPoint,
+  AppData, Deal, Comp, Market, Firm, RateMetric, CostComponent, InflationIndex, SeriesPoint, Project,
 } from "./types";
+import { underwrite, UWInputs } from "../lib/underwriting";
 
 // --- deterministic monthly series helper (ends at the anchor month) ---
 const ANCHOR = { y: 2026, m: 7 }; // Jul 2026
@@ -39,37 +40,26 @@ const markets: Market[] = [
   { id: "mkt_ren", name: "Reno–Tahoe", region: "Mountain West", operationalMW: 265, underConstructionMW: 305, plannedMW: 820, vacancyPct: 6.7, absorptionMW: 112, rentPerKwMonth: 118, rentYoYPct: 8.3, landPerAcre: 365000, powerAvail: "Moderate", powerCostKwh: 0.071, preleasedPct: 61, tier: "Emerging" },
 ];
 
-// ============================== DEALS =======================================
+// ============================== DEAL FLOW (public, announced) ===============
+// Publicly announced market transactions — deal-flow reporting, not a private
+// pipeline. Your own live pursuits arrive via the CRM feed (Deal Flow template).
 const deals: Deal[] = [
-  { id: "d1", name: "Ashburn Powered Shell — Building D", market: "Northern Virginia", dealType: "Investment Sale", assetType: "Powered Shell", stage: "Under Contract", sizeMW: 72, sf: 320000, value: 486000000, capRate: 6.1, probability: 85, broker: "You", client: "Sovereign Data Partners", counterparty: "Aligned Data Centers", commission: 3400000, closeDate: "2026-09-18", source: "internal", notes: "48MW pre-leased to a hyperscaler; balance speculative. Buyer financing committed." },
-  { id: "d2", name: "DFW Hyperscale Campus — 216 acres", market: "Dallas–Fort Worth", dealType: "Land", assetType: "Land", stage: "LOI", sizeMW: 300, sf: 0, value: 196000000, capRate: null, probability: 60, broker: "You", client: "Prime Compute Holdings", counterparty: "Regional landowner", commission: 2100000, closeDate: "2026-11-05", source: "internal", notes: "Entitled, 300MW substation commitment from Oncor by 2028. Zoning cleared." },
-  { id: "d3", name: "Phoenix Colo Portfolio (3 assets)", market: "Phoenix", dealType: "Investment Sale", assetType: "Portfolio", stage: "Underwriting", sizeMW: 96, sf: 540000, value: 742000000, capRate: 6.4, probability: 45, broker: "Desk", client: "Confidential PE", counterparty: "Iron Mountain", commission: 4600000, closeDate: "2027-01-22", source: "internal", notes: "Stabilized triple-net colo. Weighted lease term 7.4 yrs. Strong investment-grade roster." },
-  { id: "d4", name: "Atlanta Build-to-Suit — Douglas County", market: "Atlanta", dealType: "Development", assetType: "Hyperscale", stage: "Sourcing", sizeMW: 144, sf: 630000, value: 1520000000, capRate: 7.2, probability: 30, broker: "You", client: "Vantage Data Centers", counterparty: "Hyperscale tenant (NDA)", commission: 5200000, closeDate: "2027-06-30", source: "internal", notes: "Development yield-on-cost ~8.9%. 15-yr lease. Power energization Q4 2027." },
-  { id: "d5", name: "Silicon Valley Enterprise Sale-Leaseback", market: "Silicon Valley", dealType: "Investment Sale", assetType: "Enterprise", stage: "Closed", sizeMW: 18, sf: 145000, value: 214000000, capRate: 5.7, probability: 100, broker: "You", client: "Blackstone", counterparty: "Fortune 100 tenant", commission: 1600000, closeDate: "2026-05-30", source: "internal", notes: "Closed. 20-yr SLB, 2.5% annual escalators. Compressed cap on credit tenant." },
-  { id: "d6", name: "Columbus Speculative Development JV", market: "Columbus", dealType: "Equity", assetType: "Hyperscale", stage: "Underwriting", sizeMW: 120, sf: 520000, value: 890000000, capRate: 7.8, probability: 50, broker: "Desk", client: "Institutional LP", counterparty: "Stack Infrastructure", commission: 3900000, closeDate: "2027-03-15", source: "internal", notes: "90/10 JV equity raise. Speculative but AI-demand thesis. Land + power secured." },
-  { id: "d7", name: "NoVA Stabilized Data Center Recap", market: "Northern Virginia", dealType: "Debt", assetType: "Hyperscale", stage: "LOI", sizeMW: 60, sf: 285000, value: 540000000, capRate: 6.0, probability: 65, broker: "Desk", client: "QTS / Blackstone", counterparty: "Life-co lender syndicate", commission: 2700000, closeDate: "2026-10-28", source: "internal", notes: "$540M refinance, ~60% LTV, 10-yr fixed. Fully leased, IG tenant." },
-  { id: "d8", name: "Reno Land Assemblage — TRIC adjacency", market: "Reno–Tahoe", dealType: "Land", assetType: "Land", stage: "Sourcing", sizeMW: 200, sf: 0, value: 128000000, capRate: null, probability: 25, broker: "You", client: "Confidential developer", counterparty: "Multiple owners", commission: 1400000, closeDate: "2027-04-10", source: "internal", notes: "Assembling 4 parcels. Power study underway with NV Energy." },
-  { id: "d9", name: "Chicago Colo Repositioning", market: "Chicago", dealType: "Investment Sale", assetType: "Colocation", stage: "Lost", sizeMW: 24, sf: 160000, value: 168000000, capRate: 7.5, probability: 0, broker: "Desk", client: "Value-add buyer", counterparty: "Regional operator", commission: 0, closeDate: "2026-04-12", source: "internal", notes: "Lost to competing bid at tighter pricing. Retain relationship for next cycle." },
-  { id: "d10", name: "Phoenix Powered Land — 130 acres", market: "Phoenix", dealType: "Land", assetType: "Land", stage: "Under Contract", sizeMW: 180, sf: 0, value: 149000000, capRate: null, probability: 80, broker: "You", client: "Aligned Data Centers", counterparty: "Master developer", commission: 1650000, closeDate: "2026-08-29", source: "internal", notes: "SRP power commitment letter in hand. 180MW phased energization." },
-  { id: "d11", name: "Salt Lake Edge Facility", market: "Salt Lake City", dealType: "Lease", assetType: "Edge", stage: "LOI", sizeMW: 12, sf: 68000, value: 0, capRate: null, probability: 55, broker: "You", client: "AI inference startup", counterparty: "DataBank", commission: 480000, closeDate: "2026-09-30", source: "internal", notes: "36-month lease, 12MW, liquid-cooling ready. Commission on lease value." },
-  { id: "d12", name: "Hillsboro Cross-Connect Campus", market: "Hillsboro (Portland)", dealType: "Investment Sale", assetType: "Colocation", stage: "Underwriting", sizeMW: 40, sf: 240000, value: 288000000, capRate: 6.8, probability: 40, broker: "Desk", client: "Core-plus fund", counterparty: "Flexential", commission: 1900000, closeDate: "2027-02-18", source: "internal", notes: "Network-dense, subsea cable adjacency. Rich interconnection revenue." },
-  { id: "d13", name: "Central WA Hydro-Powered Campus", market: "Central Washington", dealType: "Development", assetType: "Hyperscale", stage: "Sourcing", sizeMW: 250, sf: 1050000, value: 2450000000, capRate: 8.0, probability: 20, broker: "You", client: "Confidential hyperscaler", counterparty: "Sabey Data Centers", commission: 7800000, closeDate: "2027-09-01", source: "internal", notes: "Ultra-low-cost hydro power ($0.045/kWh). Sustainability-led mandate." },
-  { id: "d14", name: "Atlanta Stabilized Sale — Fulton", market: "Atlanta", dealType: "Investment Sale", assetType: "Hyperscale", stage: "Closed", sizeMW: 48, sf: 260000, value: 372000000, capRate: 6.5, probability: 100, broker: "You", client: "Digital Realty", counterparty: "CyrusOne", commission: 2300000, closeDate: "2026-06-20", source: "internal", notes: "Closed. Single-tenant hyperscale, 12-yr remaining term. Clean process." },
+  { id: "df1", name: "QTS Ashburn campus recapitalization", market: "Northern Virginia", dealType: "Investment Sale", assetType: "Hyperscale", stage: "Closed", sizeMW: 96, sf: 480000, value: 1104000000, capRate: 5.9, probability: 100, broker: "Market", client: "Blackstone", counterparty: "QTS", commission: 0, closeDate: "2026-06-02", source: "public", notes: "Announced recapitalization; press release + county records." },
+  { id: "df2", name: "Digital Realty / CyrusOne Phoenix trade", market: "Phoenix", dealType: "Investment Sale", assetType: "Colocation", stage: "Closed", sizeMW: 32, sf: 190000, value: 246000000, capRate: 6.5, probability: 100, broker: "Market", client: "Digital Realty", counterparty: "CyrusOne", commission: 0, closeDate: "2026-04-28", source: "public", notes: "Disclosed via SEC 8-K." },
+  { id: "df3", name: "Aligned Phoenix sovereign-wealth sale", market: "Phoenix", dealType: "Investment Sale", assetType: "Hyperscale", stage: "Closed", sizeMW: 84, sf: 420000, value: 714000000, capRate: 6.4, probability: 100, broker: "Market", client: "Sovereign wealth fund", counterparty: "Aligned Data Centers", commission: 0, closeDate: "2026-01-30", source: "public", notes: "Reported in trade press (DCD)." },
+  { id: "df4", name: "Vantage DFW powered-shell acquisition", market: "Dallas–Fort Worth", dealType: "Investment Sale", assetType: "Powered Shell", stage: "Closed", sizeMW: 60, sf: 300000, value: 402000000, capRate: 6.3, probability: 100, broker: "Market", client: "Vantage Data Centers", counterparty: "Regional developer", commission: 0, closeDate: "2026-05-14", source: "public", notes: "Announced acquisition of powered shell." },
+  { id: "df5", name: "Stack Columbus development JV (announced)", market: "Columbus", dealType: "Equity", assetType: "Hyperscale", stage: "Under Contract", sizeMW: 54, sf: 270000, value: 313000000, capRate: 7.0, probability: 90, broker: "Market", client: "Institutional JV", counterparty: "Stack Infrastructure", commission: 0, closeDate: "2026-02-27", source: "public", notes: "JV formation reported in trade press." },
 ];
 
 // ============================== COMPS =======================================
 const comps: Comp[] = [
   { id: "c1", type: "Sale", market: "Northern Virginia", assetType: "Hyperscale", date: "2026-06-02", sizeMW: 96, sf: 480000, price: 1104000000, pricePerKw: 11500, capRate: 5.9, rentPerKwMonth: null, partyA: "Blackstone", partyB: "QTS (private)", source: "public", citation: "Press release + county records", verified: true },
   { id: "c2", type: "Sale", market: "Dallas–Fort Worth", assetType: "Powered Shell", date: "2026-05-14", sizeMW: 60, sf: 300000, price: 402000000, pricePerKw: 6700, capRate: 6.3, rentPerKwMonth: null, partyA: "Vantage", partyB: "Regional developer", source: "public", citation: "Trade press (DCD)", verified: true },
-  { id: "c3", type: "Lease", market: "Northern Virginia", assetType: "Hyperscale", date: "2026-06-20", sizeMW: 48, sf: 220000, price: null, pricePerKw: null, capRate: null, rentPerKwMonth: 162, partyA: "Hyperscaler (NDA)", partyB: "Aligned", source: "internal", citation: "Desk comp", verified: true },
   { id: "c4", type: "Sale", market: "Phoenix", assetType: "Colocation", date: "2026-04-28", sizeMW: 32, sf: 190000, price: 246000000, pricePerKw: 7700, capRate: 6.5, rentPerKwMonth: null, partyA: "Digital Realty", partyB: "CyrusOne", source: "public", citation: "SEC 8-K disclosure", verified: true },
   { id: "c5", type: "Lease", market: "Atlanta", assetType: "Hyperscale", date: "2026-05-08", sizeMW: 36, sf: 200000, price: null, pricePerKw: null, capRate: null, rentPerKwMonth: 128, partyA: "Cloud provider", partyB: "Switch", source: "public", citation: "Broker survey", verified: false, flagged: true },
-  { id: "c6", type: "Sale", market: "Silicon Valley", assetType: "Enterprise", date: "2026-05-30", sizeMW: 18, sf: 145000, price: 214000000, pricePerKw: 11900, capRate: 5.7, rentPerKwMonth: null, partyA: "Blackstone", partyB: "Fortune 100 SLB", source: "internal", citation: "Own transaction", verified: true },
   { id: "c7", type: "Sale", market: "Chicago", assetType: "Colocation", date: "2026-03-19", sizeMW: 24, sf: 160000, price: 171000000, pricePerKw: 7125, capRate: 7.2, rentPerKwMonth: null, partyA: "Core-plus fund", partyB: "Regional operator", source: "public", citation: "County deed record", verified: true },
   { id: "c8", type: "Lease", market: "Phoenix", assetType: "Colocation", date: "2026-06-11", sizeMW: 20, sf: 120000, price: null, pricePerKw: null, capRate: null, rentPerKwMonth: 133, partyA: "Enterprise", partyB: "Iron Mountain", source: "public", citation: "Tenant rep survey", verified: false, flagged: true },
-  { id: "c9", type: "Sale", market: "Atlanta", assetType: "Hyperscale", date: "2026-06-20", sizeMW: 48, sf: 260000, price: 372000000, pricePerKw: 7750, capRate: 6.5, rentPerKwMonth: null, partyA: "Digital Realty", partyB: "CyrusOne", source: "internal", citation: "Own transaction", verified: true },
   { id: "c10", type: "Sale", market: "Columbus", assetType: "Powered Shell", date: "2026-02-27", sizeMW: 54, sf: 270000, price: 313000000, pricePerKw: 5800, capRate: 7.0, rentPerKwMonth: null, partyA: "Institutional JV", partyB: "Stack Infrastructure", source: "public", citation: "Trade press", verified: true },
-  { id: "c11", type: "Lease", market: "Northern Virginia", assetType: "Powered Shell", date: "2026-04-02", sizeMW: 30, sf: 150000, price: null, pricePerKw: null, capRate: null, rentPerKwMonth: 149, partyA: "Colo operator", partyB: "Landowner-developer", source: "internal", citation: "Desk comp", verified: true },
   { id: "c12", type: "Sale", market: "Hillsboro (Portland)", assetType: "Colocation", date: "2026-03-05", sizeMW: 28, sf: 165000, price: 205000000, pricePerKw: 7300, capRate: 6.9, rentPerKwMonth: null, partyA: "Core-plus fund", partyB: "Flexential", source: "public", citation: "CoStar", verified: true },
   { id: "c13", type: "Sale", market: "Reno–Tahoe", assetType: "Land", date: "2026-05-21", sizeMW: 0, sf: 0, price: 62000000, pricePerKw: null, capRate: null, rentPerKwMonth: null, partyA: "Developer", partyB: "Landowner", source: "public", citation: "County record", verified: true },
   { id: "c14", type: "Sale", market: "Dallas–Fort Worth", assetType: "Hyperscale", date: "2026-06-30", sizeMW: 72, sf: 360000, price: 612000000, pricePerKw: 8500, capRate: 6.2, rentPerKwMonth: null, partyA: "REIT", partyB: "Developer", source: "public", citation: "Press + records", verified: true },
@@ -140,9 +130,53 @@ const inflation: InflationIndex[] = [
   { key: "power", label: "Industrial Power ($/kWh)", latest: 0.083, unit: "$/kWh", yoyPct: 7.4, category: "Energy", history: series(18, 0.075, 0.083, 0.003, 3) },
 ];
 
+// ============================== PROJECTS (Underwriting Reports) =============
+// Seeded from publicly-announced developments, underwritten via the engine so
+// the reported outputs are internally consistent. Replace with your own engine's
+// XLSX exports in the Underwriting Reports section.
+function mkProject(
+  ref: string, name: string, market: string, assetType: Project["assetType"],
+  status: Project["status"], updated: string, inp: UWInputs, notes: string
+): Project {
+  const o = underwrite(inp);
+  return {
+    id: "prj_" + ref.toLowerCase(), ref, name, market, assetType, status,
+    sizeMW: inp.sizeMW, updated, source: "public", notes,
+    totalCost: o.totalCost, stabilizedNOI: o.stabilizedNOI, yieldOnCost: o.yieldOnCost,
+    stabilizedValue: o.stabilizedValue, developmentProfit: o.developmentProfit,
+    developmentMargin: o.developmentMargin, developmentSpreadBps: o.developmentSpreadBps,
+    equity: o.equity, loan: o.loanAmount, dscr: o.dscr, debtYield: o.debtYield,
+    leveredIRR: o.leveredIRR ?? 0, unleveredIRR: o.unleveredIRR ?? 0,
+    equityMultiple: o.equityMultiple, cashFlows: o.cashFlows,
+    devCostPerMW: inp.devCostPerMW, leaseRateKwMonth: inp.leaseRateKwMonth,
+    opexPctRevenue: inp.opexPctRevenue, rentEscalatorPct: inp.rentEscalatorPct,
+    stabilizedCapRate: inp.stabilizedCapRate, exitCapRate: inp.exitCapRate,
+    holdYears: inp.holdYears, ltcPct: inp.ltcPct, interestRatePct: inp.interestRatePct,
+  };
+}
+
+const base = { opexPctRevenue: 6, rentEscalatorPct: 2.5, stabilizationMonths: 18, saleCostPct: 1 };
+const projects: Project[] = [
+  mkProject("NOVA-A1", "Ashburn Hyperscale — Phase I", "Northern Virginia", "Hyperscale", "In Development", "2026-07-08",
+    { sizeMW: 96, devCostPerMW: 10850000, leaseRateKwMonth: 95, stabilizedCapRate: 6.0, exitCapRate: 6.25, holdYears: 7, ltcPct: 55, interestRatePct: 6.3, ...base },
+    "Flagship NoVA development; power-constrained submarket supports premium net rent."),
+  mkProject("ATL-DC2", "Douglas County Build-to-Suit", "Atlanta", "Hyperscale", "Approved", "2026-07-11",
+    { sizeMW: 144, devCostPerMW: 10200000, leaseRateKwMonth: 78, stabilizedCapRate: 6.75, exitCapRate: 7.0, holdYears: 8, ltcPct: 55, interestRatePct: 6.4, ...base },
+    "15-yr BTS lease to hyperscaler; energization Q4 2027."),
+  mkProject("PHX-L3", "Phoenix Powered Land Development", "Phoenix", "Powered Shell", "Underwriting", "2026-07-15",
+    { sizeMW: 60, devCostPerMW: 9600000, leaseRateKwMonth: 80, stabilizedCapRate: 6.9, exitCapRate: 7.1, holdYears: 6, ltcPct: 50, interestRatePct: 6.5, ...base },
+    "SRP power commitment secured; phased 180MW campus, Phase 1 = 60MW."),
+  mkProject("CMH-JV", "Columbus Speculative JV", "Columbus", "Hyperscale", "Underwriting", "2026-07-02",
+    { sizeMW: 120, devCostPerMW: 9900000, leaseRateKwMonth: 74, stabilizedCapRate: 7.0, exitCapRate: 7.25, holdYears: 7, ltcPct: 50, interestRatePct: 6.6, ...base },
+    "AI-demand thesis; land + power secured, speculative lease-up risk."),
+  mkProject("CWA-HY", "Central WA Hydro Campus", "Central Washington", "Hyperscale", "On Hold", "2026-06-20",
+    { sizeMW: 250, devCostPerMW: 9200000, leaseRateKwMonth: 66, stabilizedCapRate: 7.25, exitCapRate: 7.5, holdYears: 8, ltcPct: 45, interestRatePct: 6.6, ...base },
+    "Ultra-low-cost hydro power ($0.045/kWh); sustainability-led mandate, awaiting anchor tenant."),
+];
+
 export function makeSeedData(): AppData {
   return {
-    deals, comps, markets, firms, rates, costs, inflation,
-    meta: { lastRefresh: null, version: 1 },
+    deals, comps, markets, firms, rates, costs, inflation, projects,
+    meta: { lastRefresh: null, version: 2 },
   };
 }
