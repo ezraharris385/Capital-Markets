@@ -6,7 +6,7 @@ import { LineChart, RankBars, Donut, SERIES, Legend } from "../components/charts
 import { fmtUSD, fmtPct, fmtMW, gainColor } from "../lib/format";
 
 export const Overview: React.FC = () => {
-  const { data } = useStore();
+  const { data, loadDemo, toast } = useStore();
   const d = data;
   const hasProjects = d.projects.length > 0;
 
@@ -80,8 +80,10 @@ export const Overview: React.FC = () => {
             <div className="brand-mark" style={{ width: 42, height: 42, flex: "none" }}><Icon name="underwrite" size={22} style={{ color: "var(--accent)" }} /></div>
             <div>
               <div style={{ fontWeight: 680, fontSize: 16 }}>Your underwriting portfolio starts at zero</div>
-              <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Upload your engine's exports in <strong style={{ color: "var(--text-secondary)" }}>Underwriting Reports</strong> to populate this dashboard. The public market intelligence below is live now.</div>
+              <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Upload your engine's exports in <strong style={{ color: "var(--text-secondary)" }}>Underwriting Reports</strong> to populate this dashboard — or load a demo portfolio to show it off. The public market intelligence below is live now.</div>
             </div>
+            <div className="spacer" />
+            <button className="btn btn-primary" style={{ flex: "none" }} onClick={() => { loadDemo(); toast("Demo portfolio loaded"); }}><Icon name="spark" size={15} /> Load demo data</button>
           </div>
         </div>
       )}

@@ -19,7 +19,7 @@ function statusBadge(s: ProjectStatus) {
 }
 
 export const Projects: React.FC = () => {
-  const { data, setData, toast } = useStore();
+  const { data, setData, loadDemo, toast } = useStore();
   const P = data.projects;
   const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState<Project | null>(null);
@@ -99,7 +99,8 @@ export const Projects: React.FC = () => {
             </div>
             <div className="row" style={{ justifyContent: "center", gap: 10, marginTop: 16 }}>
               <button className="btn btn-sm" onClick={() => downloadTemplate(PROJECT_HEADERS, PROJECT_EXAMPLE, "meridian-underwriting-template.xlsx")}><Icon name="download" size={15} /> Template</button>
-              <button className="btn btn-primary btn-sm" onClick={() => fileRef.current?.click()}><Icon name="upload" size={15} /> Upload underwriting</button>
+              <button className="btn btn-sm" onClick={() => fileRef.current?.click()}><Icon name="upload" size={15} /> Upload underwriting</button>
+              <button className="btn btn-primary btn-sm" onClick={() => { loadDemo(); toast("Demo portfolio loaded"); }}><Icon name="spark" size={15} /> Load demo data</button>
             </div>
           </div>
         </Card>

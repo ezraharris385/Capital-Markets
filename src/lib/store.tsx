@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import type { AppData } from "../data/types";
-import { makeSeedData } from "../data/seed";
+import { makeSeedData, makeDemoProjects, makeDemoDeals } from "../data/seed";
 
 const DATA_KEY = "meridian.data.v3";
 const SETTINGS_KEY = "meridian.settings.v1";
@@ -30,6 +30,7 @@ interface StoreCtx {
   setData: (updater: (d: AppData) => AppData) => void;
   replaceData: (d: AppData) => void;
   resetData: () => void;
+  loadDemo: () => void;
   settings: Settings;
   updateSettings: (patch: Partial<Settings>) => void;
   toasts: Toast[];
@@ -82,6 +83,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const replaceData = useCallback((d: AppData) => setDataState(d), []);
   const resetData = useCallback(() => setDataState(makeSeedData()), []);
 
+  // Populate the private/upload sections with realistic fake records for a demo.
+  const loadDemo = useCallback(() => setDataState((d) => {
+    const demoDeals = makeDemoDeals();
+    const seen = new Set(d.deals.map((x) => x.id));
+    return {
+      ...d,
+      projects: makeDemoProjects(),
+      deals: [...demoDeals.filter((x) => !seen.has(x.id)), ...d.deals],
+    };
+  }), []);
+
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     setSettings((s) => ({ ...s, ...patch }));
   }, []);
@@ -93,8 +105,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ data, setData, replaceData, resetData, settings, updateSettings, toasts, toast }),
-    [data, setData, replaceData, resetData, settings, updateSettings, toasts, toast]
+    () => ({ data, setData, replaceData, resetData, loadDemo, settings, updateSettings, toasts, toast }),
+    [data, setData, replaceData, resetData, loadDemo, settings, updateSettings, toasts, toast]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

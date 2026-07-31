@@ -33,7 +33,7 @@ const num = (v: any) => { const n = parseFloat(String(v ?? "").replace(/[$,%]/g,
 const numN = (v: any) => { const s = String(v ?? "").trim(); if (!s) return null; const n = parseFloat(s.replace(/[$,%]/g, "")); return isNaN(n) ? null : n; };
 
 export const DataHub: React.FC = () => {
-  const { data, setData, resetData, toast } = useStore();
+  const { data, setData, resetData, loadDemo, toast } = useStore();
   const [target, setTarget] = useState<Target>("deals");
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -142,18 +142,25 @@ export const DataHub: React.FC = () => {
       </Card>
 
       <Card title="Data controls" sub="Local-first: your data lives in this browser and never leaves it unless you export or connect a key.">
-        <div className="row" style={{ gap: 10 }}>
-          <button className="btn" style={{ color: "var(--down)" }} onClick={() => setConfirmReset(true)}><Icon name="refresh" size={15} /> Reset to sample data</button>
-          <span className="muted" style={{ fontSize: 12.5 }}>Restores the built-in demo dataset. Export first if you want to keep your edits.</span>
+        <div className="col" style={{ gap: 14 }}>
+          <div className="row" style={{ gap: 10 }}>
+            <button className="btn btn-primary" onClick={() => { loadDemo(); toast("Demo portfolio loaded"); }}><Icon name="spark" size={15} /> Load demo data</button>
+            <span className="muted" style={{ fontSize: 12.5 }}>Fills the underwriting portfolio and deal flow with realistic fake records — perfect for showing it off. Public market data is already populated.</span>
+          </div>
+          <div className="hr" />
+          <div className="row" style={{ gap: 10 }}>
+            <button className="btn" style={{ color: "var(--down)" }} onClick={() => setConfirmReset(true)}><Icon name="refresh" size={15} /> Clear to empty</button>
+            <span className="muted" style={{ fontSize: 12.5 }}>Removes all your project & uploaded data, keeping only the public market intelligence. Export first to keep your edits.</span>
+          </div>
         </div>
       </Card>
 
       {confirmReset && (
-        <Modal title="Reset to sample data?" onClose={() => setConfirmReset(false)}>
-          <p className="muted" style={{ fontSize: 13.5 }}>This replaces all current records with the built-in demo dataset. This cannot be undone.</p>
+        <Modal title="Clear to empty?" onClose={() => setConfirmReset(false)}>
+          <p className="muted" style={{ fontSize: 13.5 }}>This removes all your projects and uploaded records, keeping only the publicly-sourced market intelligence. This cannot be undone.</p>
           <div className="row" style={{ justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
             <button className="btn btn-sm" onClick={() => setConfirmReset(false)}>Cancel</button>
-            <button className="btn btn-primary btn-sm" style={{ background: "var(--critical)", color: "#fff" }} onClick={() => { resetData(); setConfirmReset(false); toast("Reset to sample data", "warn"); }}>Reset</button>
+            <button className="btn btn-primary btn-sm" style={{ background: "var(--critical)", color: "#fff" }} onClick={() => { resetData(); setConfirmReset(false); toast("Cleared to empty", "warn"); }}>Clear</button>
           </div>
         </Modal>
       )}

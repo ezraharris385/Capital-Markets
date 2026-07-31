@@ -1,6 +1,7 @@
 import type {
   AppData, Deal, Comp, Market, Firm, RateMetric, CostComponent, InflationIndex, SeriesPoint, Project,
 } from "./types";
+import { underwrite, UWInputs } from "../lib/underwriting";
 
 // --- deterministic monthly series helper (ends at the anchor month) ---
 const ANCHOR = { y: 2026, m: 7 }; // Jul 2026
@@ -139,4 +140,63 @@ export function makeSeedData(): AppData {
     deals, comps, markets, firms, rates, costs, inflation, projects,
     meta: { lastRefresh: null, version: 3 },
   };
+}
+
+// ============================== DEMO DATA (for showing it off) ==============
+// One-click "Load demo data" fills the private/upload sections with realistic
+// fake records so the whole dashboard is populated for a demo. Not loaded by
+// default — the app starts at zero for your own data until you load or upload.
+function mkProject(
+  ref: string, name: string, market: string, assetType: Project["assetType"],
+  status: Project["status"], updated: string, inp: UWInputs, notes: string
+): Project {
+  const o = underwrite(inp);
+  return {
+    id: "prj_" + ref.toLowerCase(), ref, name, market, assetType, status,
+    sizeMW: inp.sizeMW, updated, source: "internal", notes,
+    totalCost: o.totalCost, stabilizedNOI: o.stabilizedNOI, yieldOnCost: o.yieldOnCost,
+    stabilizedValue: o.stabilizedValue, developmentProfit: o.developmentProfit,
+    developmentMargin: o.developmentMargin, developmentSpreadBps: o.developmentSpreadBps,
+    equity: o.equity, loan: o.loanAmount, dscr: o.dscr, debtYield: o.debtYield,
+    leveredIRR: o.leveredIRR ?? 0, unleveredIRR: o.unleveredIRR ?? 0,
+    equityMultiple: o.equityMultiple, cashFlows: o.cashFlows,
+    devCostPerMW: inp.devCostPerMW, leaseRateKwMonth: inp.leaseRateKwMonth,
+    opexPctRevenue: inp.opexPctRevenue, rentEscalatorPct: inp.rentEscalatorPct,
+    stabilizedCapRate: inp.stabilizedCapRate, exitCapRate: inp.exitCapRate,
+    holdYears: inp.holdYears, ltcPct: inp.ltcPct, interestRatePct: inp.interestRatePct,
+  };
+}
+const dBase = { opexPctRevenue: 6, rentEscalatorPct: 2.5, stabilizationMonths: 18, saleCostPct: 1 };
+
+export function makeDemoProjects(): Project[] {
+  return [
+    mkProject("NOVA-A1", "Ashburn Hyperscale — Phase I", "Northern Virginia", "Hyperscale", "In Development", "2026-07-08",
+      { sizeMW: 96, devCostPerMW: 10850000, leaseRateKwMonth: 92, stabilizedCapRate: 6.1, exitCapRate: 6.35, holdYears: 7, ltcPct: 55, interestRatePct: 6.3, ...dBase },
+      "Flagship NoVA development; power-constrained submarket supports premium net rent."),
+    mkProject("ATL-DC2", "Douglas County Build-to-Suit", "Atlanta", "Hyperscale", "Approved", "2026-07-11",
+      { sizeMW: 144, devCostPerMW: 10200000, leaseRateKwMonth: 78, stabilizedCapRate: 6.75, exitCapRate: 7.0, holdYears: 8, ltcPct: 55, interestRatePct: 6.4, ...dBase },
+      "15-yr BTS lease to hyperscaler; energization Q4 2027."),
+    mkProject("PHX-L3", "Phoenix Powered Land Development", "Phoenix", "Powered Shell", "Underwriting", "2026-07-15",
+      { sizeMW: 60, devCostPerMW: 9600000, leaseRateKwMonth: 80, stabilizedCapRate: 6.9, exitCapRate: 7.1, holdYears: 6, ltcPct: 50, interestRatePct: 6.5, ...dBase },
+      "SRP power commitment secured; phased 180MW campus, Phase 1 = 60MW."),
+    mkProject("CMH-JV", "Columbus Speculative JV", "Columbus", "Hyperscale", "Underwriting", "2026-07-02",
+      { sizeMW: 120, devCostPerMW: 9900000, leaseRateKwMonth: 74, stabilizedCapRate: 7.0, exitCapRate: 7.25, holdYears: 7, ltcPct: 50, interestRatePct: 6.6, ...dBase },
+      "AI-demand thesis; land + power secured, speculative lease-up risk."),
+    mkProject("DFW-B4", "DFW Colo Repositioning", "Dallas–Fort Worth", "Colocation", "Stabilized", "2026-06-28",
+      { sizeMW: 40, devCostPerMW: 9300000, leaseRateKwMonth: 82, stabilizedCapRate: 6.8, exitCapRate: 6.9, holdYears: 5, ltcPct: 55, interestRatePct: 6.4, ...dBase },
+      "Stabilized, cash-flowing colo; interconnection-rich, marketed for sale."),
+    mkProject("CWA-HY", "Central WA Hydro Campus", "Central Washington", "Hyperscale", "On Hold", "2026-06-20",
+      { sizeMW: 250, devCostPerMW: 9200000, leaseRateKwMonth: 66, stabilizedCapRate: 7.25, exitCapRate: 7.5, holdYears: 8, ltcPct: 45, interestRatePct: 6.6, ...dBase },
+      "Ultra-low-cost hydro power ($0.045/kWh); sustainability-led mandate, awaiting anchor tenant."),
+  ];
+}
+
+// A few private CRM pursuits to show alongside the public deal flow in the demo.
+export function makeDemoDeals(): Deal[] {
+  return [
+    { id: "demo_p1", name: "NoVA Stabilized Data Center Recap", market: "Northern Virginia", dealType: "Debt", assetType: "Hyperscale", stage: "LOI", sizeMW: 60, sf: 285000, value: 540000000, capRate: 6.0, probability: 65, broker: "You", client: "QTS / Blackstone", counterparty: "Life-co lender syndicate", commission: 2700000, closeDate: "2026-10-28", source: "internal", notes: "$540M refinance, ~60% LTV, 10-yr fixed. Fully leased, IG tenant." },
+    { id: "demo_p2", name: "Phoenix Powered Land — 130 acres", market: "Phoenix", dealType: "Land", assetType: "Land", stage: "Under Contract", sizeMW: 180, sf: 0, value: 149000000, capRate: null, probability: 80, broker: "You", client: "Aligned Data Centers", counterparty: "Master developer", commission: 1650000, closeDate: "2026-08-29", source: "internal", notes: "SRP power commitment letter in hand. 180MW phased energization." },
+    { id: "demo_p3", name: "Atlanta Build-to-Suit — Douglas County", market: "Atlanta", dealType: "Development", assetType: "Hyperscale", stage: "Sourcing", sizeMW: 144, sf: 630000, value: 1520000000, capRate: 7.2, probability: 30, broker: "You", client: "Vantage Data Centers", counterparty: "Hyperscale tenant (NDA)", commission: 5200000, closeDate: "2027-06-30", source: "internal", notes: "Development yield-on-cost ~8.9%. 15-yr lease. Power energization Q4 2027." },
+    { id: "demo_p4", name: "Silicon Valley Enterprise Sale-Leaseback", market: "Silicon Valley", dealType: "Investment Sale", assetType: "Enterprise", stage: "Closed", sizeMW: 18, sf: 145000, value: 214000000, capRate: 5.7, probability: 100, broker: "You", client: "Blackstone", counterparty: "Fortune 100 tenant", commission: 1600000, closeDate: "2026-05-30", source: "internal", notes: "Closed. 20-yr SLB, 2.5% annual escalators." },
+  ];
 }
